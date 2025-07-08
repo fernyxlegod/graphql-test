@@ -1,0 +1,70 @@
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+type Post {
+    id: ID!
+    title: String!
+    content: String!
+    user: User! @belongsTo
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    posts: [Post!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Query {
+    posts(
+        page: Int @paginate(defaultCount: 10)
+    ): [Post!]! @paginate(defaultCount: 10)
+
+    users(
+        page: Int @paginate(defaultCount: 10)
+    ): [User!]! @paginate(defaultCount: 10)
+
+    post(id: ID! @eq): Post @find
+
+    users: [User!]! @all
+
+    user(id: ID! @eq): User @find
+
+    me: User @field(resolver: "App\\GraphQL\\Queries\\AuthQuery")
+}
+
+type Mutation {
+    createPost(
+        title: String! @rules(apply: ["required", "min: 1"])
+        content: String! @rules(apply: ["required", "min: 1"])
+        user_id: ID! @rules(apply: ["required", "exists:users,id"])
+    ): Post @create
+
+    createUserPost(
+        title: String! @rules(apply: ["required", "min: 1"])
+        content: String! @rules(apply: ["required", "min: 1"])
+    ): Post @field(resolver: "PostMutator@create") @guard(with: ["api"])
+
+    deletePost(id: ID! @eq): Post @delete
+
+    createUser(
+        name: String! @rules(apply: ["required", "min: 1"])
+        email: String! @rules(apply: ["email", "unique:users"])
+        password: String! @hash @rules(apply: ["min: 1"])
+    ): User @create
+
+    deleteUser(id: ID! @eq): User @delete
+
+    login(
+        email: String!
+        password: String!
+    ): AuthPayload @field(resolver: "AuthMutator@resolve")
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
