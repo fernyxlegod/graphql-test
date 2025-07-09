@@ -6,6 +6,7 @@ use App\Models\User;
 use GraphQL\Type\Definition\ResolveInfo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
 class AuthMutator
@@ -14,16 +15,10 @@ class AuthMutator
     {
         $credentials = Arr::only($args, ['email', 'password']);
 
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::once($credentials)) { // Используем once для безсессионной проверки
             throw new \RuntimeException('Invalid credentials.');
         }
 
-        $user = Auth::user();
-        $token = $user->createToken('graphql-token')->plainTextToken; // Sanctum токен
-
-        return [
-            'token' => $token,
-            'user' => $user,
-        ];
+        return Auth::user()->createAuthToken();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\GraphQL\Mutations;
 
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
@@ -10,13 +11,23 @@ class PostMutator
 {
     public function create($rootValue, array $args, GraphQLContext $context)
     {
-        // Явная проверка (на случай, если @guard не сработает)
-        if (!Auth::check()) {
-            throw new \RuntimeException('You must be logged in to create a post.');
+        $token = $context->request()->bearerToken();
+
+        if (!$token) {
+            throw new \RuntimeException('Missing authorization token');
+        }
+
+        $user = User::where('api_token',
+            config('auth.guards.api.hash') ? hash('sha256', $token) : $token
+        )->first();
+
+        if (!$user) {
+            throw new \RuntimeException('Invalid authentication token');
         }
 
         $post = new Post($args);
-        $context->user()->posts()->save($post); // Работает только с Sanctum
+        $post->user_id = $user->id;
+        $post->save();
 
         return $post;
     }

@@ -2,6 +2,7 @@
 
 namespace App\GraphQL\Queries;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
@@ -16,14 +17,13 @@ class AuthQuery
             throw new \Exception('Authorization token is missing');
         }
 
-        // 2. Находим токен в базе
-        $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+        // 2. Находим пользователя по токену
+        $user = User::where('api_token', hash('sha256', $token))->first();
 
-        if (!$accessToken) {
+        if (!$user) {
             throw new \Exception('Invalid token');
         }
 
-        // 3. Возвращаем пользователя
-        return $accessToken->tokenable;
+        return $user;
     }
 }
